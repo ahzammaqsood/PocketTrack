@@ -9,7 +9,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:theme="@style/ThemeOverlay.Material3.ActionBar"
-        app:title="@string/app_name"/>
+        app:title="@string/app_name"
+        app:menu="@menu/menu_main"/>
 
     <FrameLayout
         android:id="@+id/fragment_container"
