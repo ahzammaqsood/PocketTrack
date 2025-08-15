@@ -11,6 +11,7 @@ import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.google.android.gms.ads.LoadAdError
 import android.widget.Toast
 import com.pockettrack.R
+import com.pockettrack.ui.transactions.TransactionListFragment
 
 class MainActivity : AppCompatActivity() {
 
