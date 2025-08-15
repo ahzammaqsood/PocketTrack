@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.pockettrack.data.entity.TransactionEntity
 import com.pockettrack.databinding.ItemTransactionBinding
+import com.pockettrack.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
