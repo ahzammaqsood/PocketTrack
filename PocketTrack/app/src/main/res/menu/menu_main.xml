@@ -2,6 +2,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/action_add" android:title="@string/add_transaction" app:showAsAction="always" android:icon="@android:drawable/ic_input_add"/>
+    <item android:id="@+id/action_search" android:title="@string/search" app:showAsAction="always" app:actionViewClass="androidx.appcompat.widget.SearchView"/>
     <item android:id="@+id/action_export_csv" android:title="@string/export_csv" app:showAsAction="never"/>
     <item android:id="@+id/action_export_pdf" android:title="@string/export_pdf" app:showAsAction="never"/>
     <item android:id="@+id/action_theme" android:title="@string/theme_toggle" app:showAsAction="never"/>
