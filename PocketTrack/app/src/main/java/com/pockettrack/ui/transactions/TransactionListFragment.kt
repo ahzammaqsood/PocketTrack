@@ -1,27 +1,37 @@
 package com.pockettrack.ui.transactions
 
 import android.app.DatePickerDialog
+import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.Menu
-import android.view.MenuInflater
-import android.view.MenuItem
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.widget.SearchView
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.github.mikephil.charting.charts.PieChart
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.BarData
+import com.github.mikephil.charting.data.BarDataSet
+import com.github.mikephil.charting.data.BarEntry
 import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
 import com.pockettrack.R
+import com.pockettrack.data.Repository
 import com.pockettrack.data.entity.TransactionEntity
 import com.pockettrack.databinding.FragmentTransactionListBinding
+import com.pockettrack.util.ExportUtils
+import com.pockettrack.util.ThemeManager
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class TransactionListFragment : Fragment() {
 
@@ -30,9 +40,23 @@ class TransactionListFragment : Fragment() {
 
     private val viewModel: TransactionsViewModel by viewModels()
     private val adapter = TransactionsAdapter(
-        onClick = { /* open edit */ },
-        onDelete = { /* show confirm then delete */ }
+        onClick = { item -> showAddEdit(item) },
+        onDelete = { item -> deleteItem(item) }
     )
+
+    private var lastList: List<TransactionEntity> = emptyList()
+    private var currentQuery: String = ""
+
+    private val repo by lazy { Repository(requireContext()) }
+
+    private val createCsv = registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
+        uri?.let { ExportUtils.writeCsv(requireContext(), it, filterForExport()) }
+        (activity as? com.pockettrack.ui.MainActivity)?.maybeShowInterstitial()
+    }
+    private val createPdf = registerForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri: Uri? ->
+        uri?.let { ExportUtils.writePdf(requireContext(), it, filterForExport()) }
+        (activity as? com.pockettrack.ui.MainActivity)?.maybeShowInterstitial()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,13 +74,15 @@ class TransactionListFragment : Fragment() {
         binding.recycler.adapter = adapter
 
         viewModel.transactions.observe(viewLifecycleOwner, Observer { list ->
-            adapter.submitList(list)
-            renderSummary(list)
+            lastList = list
+            applySearchAndRender()
             binding.empty.isVisible = list.isEmpty()
         })
 
         binding.btnFilterDate.setOnClickListener { pickDateRange() }
         binding.btnFilterCategory.setOnClickListener { showCategoryMenu() }
+
+        setupBarChart()
     }
 
     override fun onDestroyView() {
@@ -66,16 +92,77 @@ class TransactionListFragment : Fragment() {
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         inflater.inflate(R.menu.menu_main, menu)
+        val searchItem = menu.findItem(R.id.action_search)
+        val searchView = searchItem.actionView as SearchView
+        searchView.queryHint = getString(R.string.search)
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                currentQuery = query ?: ""
+                applySearchAndRender()
+                return true
+            }
+            override fun onQueryTextChange(newText: String?): Boolean {
+                currentQuery = newText ?: ""
+                applySearchAndRender()
+                return true
+            }
+        })
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.action_add -> { /* open add */ true }
-            R.id.action_export_csv -> { /* export csv */ true }
-            R.id.action_export_pdf -> { /* export pdf */ true }
-            R.id.action_theme -> { /* toggle theme */ true }
+            R.id.action_add -> { showAddEdit(null); true }
+            R.id.action_export_csv -> { doExportCsv(); true }
+            R.id.action_export_pdf -> { doExportPdf(); true }
+            R.id.action_theme -> { toggleTheme(); true }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun showAddEdit(item: TransactionEntity?) {
+        val dlg = AddEditTransactionDialogFragment()
+        if (item != null) {
+            val b = Bundle()
+            b.putParcelable("item", item)
+            dlg.arguments = b
+        }
+        dlg.show(childFragmentManager, "add_edit")
+    }
+
+    private fun deleteItem(item: TransactionEntity) {
+        viewLifecycleOwner.lifecycleScope.launch { repo.delete(item) }
+    }
+
+    private fun doExportCsv() {
+        val sdf = SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault())
+        createCsv.launch("pockettrack_${sdf.format(Date())}.csv")
+    }
+
+    private fun doExportPdf() {
+        val sdf = SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault())
+        createPdf.launch("pockettrack_${sdf.format(Date())}.pdf")
+    }
+
+    private fun toggleTheme() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val dark = ThemeManager.isDarkFlow(requireContext()).first()
+            ThemeManager.setDark(requireContext(), !dark)
+        }
+    }
+
+    private fun applySearchAndRender() {
+        val filtered = if (currentQuery.isBlank()) lastList else lastList.filter {
+            it.category.contains(currentQuery, true) || (it.note?.contains(currentQuery, true) ?: false)
+        }
+        adapter.submitList(filtered)
+        renderSummary(filtered)
+    }
+
+    private fun setupBarChart() {
+        binding.barChart.axisRight.isEnabled = false
+        binding.barChart.description.isEnabled = false
+        binding.barChart.xAxis.position = XAxis.XAxisPosition.BOTTOM
+        binding.barChart.xAxis.granularity = 1f
     }
 
     private fun renderSummary(list: List<TransactionEntity>) {
@@ -86,7 +173,9 @@ class TransactionListFragment : Fragment() {
         binding.txtExpense.text = "Expense: ${fmt.format(expense)}"
 
         // Pie Chart by category (expenses only)
-        val byCat = list.filter { it.type == "expense" }.groupBy { it.category }.mapValues { it.value.sumOf { t -> t.amount } }
+        val byCat = list.filter { it.type == "expense" }
+            .groupBy { it.category }
+            .mapValues { it.value.sumOf { t -> t.amount } }
         val entries = byCat.entries.map { PieEntry(it.value.toFloat(), it.key) }
         val dataSet = PieDataSet(entries, "Expenses by Category")
         dataSet.setColors(intArrayOf(
@@ -97,10 +186,22 @@ class TransactionListFragment : Fragment() {
             android.graphics.Color.parseColor("#9C27B0"),
             android.graphics.Color.parseColor("#00BCD4")
         ), 255)
-        val data = PieData(dataSet)
-        binding.pieChart.data = data
+        binding.pieChart.data = PieData(dataSet)
         binding.pieChart.description.isEnabled = false
         binding.pieChart.invalidate()
+
+        // Bar Chart: total per day (expenses only) for current range
+        val cal = Calendar.getInstance()
+        val map = sortedMapOf<Int, Double>()
+        list.filter { it.type == "expense" }.forEach { t ->
+            cal.timeInMillis = t.date
+            val day = cal.get(Calendar.DAY_OF_MONTH)
+            map[day] = (map[day] ?: 0.0) + t.amount
+        }
+        val barEntries = map.entries.map { BarEntry(it.key.toFloat(), it.value.toFloat()) }
+        val barDataSet = BarDataSet(barEntries, "Daily Expense")
+        binding.barChart.data = BarData(barDataSet)
+        binding.barChart.invalidate()
     }
 
     private fun pickDateRange() {
@@ -113,8 +214,10 @@ class TransactionListFragment : Fragment() {
     }
 
     private fun showCategoryMenu() {
-        // For brevity, just cycle between null and "Food"
-        val current = (0..1).random()
-        viewModel.setCategory(if (current == 0) null else "Food")
+        // Simple toggle demo: null -> Food -> null
+        val newCat = if (viewModel.transactions.value?.any { it.category == "Food" } == true) null else "Food"
+        viewModel.setCategory(newCat)
     }
+
+    private fun filterForExport(): List<TransactionEntity> = adapter.currentList
 }
