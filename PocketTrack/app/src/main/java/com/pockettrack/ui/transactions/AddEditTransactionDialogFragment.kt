@@ -30,7 +30,8 @@ class AddEditTransactionDialogFragment : DialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        editItem = arguments?.getParcelable("item") // not used for now; simple add
+        editItem = arguments?.getParcelable("item")
+        selectedDateMillis = editItem?.date ?: System.currentTimeMillis()
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -44,7 +45,18 @@ class AddEditTransactionDialogFragment : DialogFragment() {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spCategory.adapter = adapter
 
-        binding.rbExpense.isChecked = true
+        // Prefill when editing
+        val item = editItem
+        if (item != null) {
+            if (item.type == "income") binding.rbIncome.isChecked = true else binding.rbExpense.isChecked = true
+            binding.etAmount.setText(String.format(Locale.getDefault(), "%.2f", item.amount))
+            val idx = categories.indexOf(item.category).takeIf { it >= 0 } ?: 0
+            binding.spCategory.setSelection(idx)
+            binding.etNote.setText(item.note ?: "")
+        } else {
+            binding.rbExpense.isChecked = true
+        }
+
         updateDateButton()
 
         binding.btnDate.setOnClickListener { pickDate() }
@@ -87,7 +99,6 @@ class AddEditTransactionDialogFragment : DialogFragment() {
         ) ?: TransactionEntity(type = type, amount = amount, category = category, note = note, date = selectedDateMillis)
 
         viewLifecycleOwner.lifecycleScope.launch {
-            // Use repository through ViewModel
             com.pockettrack.data.Repository(requireContext()).upsert(tx)
             dismiss()
         }

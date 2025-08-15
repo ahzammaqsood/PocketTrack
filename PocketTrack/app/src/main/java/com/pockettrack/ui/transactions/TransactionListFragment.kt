@@ -1,10 +1,9 @@
 package com.pockettrack.ui.transactions
 
 import android.app.DatePickerDialog
-import android.net.Uri
 import android.os.Bundle
 import android.view.*
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -48,15 +47,6 @@ class TransactionListFragment : Fragment() {
     private var currentQuery: String = ""
 
     private val repo by lazy { Repository(requireContext()) }
-
-    private val createCsv = registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
-        uri?.let { ExportUtils.writeCsv(requireContext(), it, filterForExport()) }
-        (activity as? com.pockettrack.ui.MainActivity)?.maybeShowInterstitial()
-    }
-    private val createPdf = registerForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri: Uri? ->
-        uri?.let { ExportUtils.writePdf(requireContext(), it, filterForExport()) }
-        (activity as? com.pockettrack.ui.MainActivity)?.maybeShowInterstitial()
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -130,17 +120,29 @@ class TransactionListFragment : Fragment() {
     }
 
     private fun deleteItem(item: TransactionEntity) {
-        viewLifecycleOwner.lifecycleScope.launch { repo.delete(item) }
+        AlertDialog.Builder(requireContext())
+            .setMessage("Delete this transaction?")
+            .setPositiveButton(R.string.delete) { _, _ ->
+                viewLifecycleOwner.lifecycleScope.launch { repo.delete(item) }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun doExportCsv() {
         val sdf = SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault())
-        createCsv.launch("pockettrack_${sdf.format(Date())}.csv")
+        registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+            uri?.let { ExportUtils.writeCsv(requireContext(), it, filterForExport()) }
+            (activity as? com.pockettrack.ui.MainActivity)?.maybeShowInterstitial()
+        }.launch("pockettrack_${sdf.format(Date())}.csv")
     }
 
     private fun doExportPdf() {
         val sdf = SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault())
-        createPdf.launch("pockettrack_${sdf.format(Date())}.pdf")
+        registerForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+            uri?.let { ExportUtils.writePdf(requireContext(), it, filterForExport()) }
+            (activity as? com.pockettrack.ui.MainActivity)?.maybeShowInterstitial()
+        }.launch("pockettrack_${sdf.format(Date())}.pdf")
     }
 
     private fun toggleTheme() {
@@ -190,7 +192,7 @@ class TransactionListFragment : Fragment() {
         binding.pieChart.description.isEnabled = false
         binding.pieChart.invalidate()
 
-        // Bar Chart: total per day (expenses only) for current range
+        // Bar Chart: total per day (expenses only)
         val cal = Calendar.getInstance()
         val map = sortedMapOf<Int, Double>()
         list.filter { it.type == "expense" }.forEach { t ->
@@ -214,9 +216,14 @@ class TransactionListFragment : Fragment() {
     }
 
     private fun showCategoryMenu() {
-        // Simple toggle demo: null -> Food -> null
-        val newCat = if (viewModel.transactions.value?.any { it.category == "Food" } == true) null else "Food"
-        viewModel.setCategory(newCat)
+        val cats = resources.getStringArray(R.array.default_categories)
+        val items = arrayOf("All") + cats
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.filter)
+            .setItems(items) { _, which ->
+                viewModel.setCategory(if (which == 0) null else items[which])
+            }
+            .show()
     }
 
     private fun filterForExport(): List<TransactionEntity> = adapter.currentList
