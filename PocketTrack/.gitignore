@@ -1,0 +1,19 @@
+# Gradle files
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build/
+/captures/
+.externalNativeBuild
+.cxx/
+**/build/
+**/captures/
+outputs/
+app/release/
+app/debug/
+# Gradle Wrapper
+/gradle/wrapper/gradle-wrapper.jar
+/gradle/wrapper/gradle-wrapper.properties
+/gradlew
+/gradlew.bat
