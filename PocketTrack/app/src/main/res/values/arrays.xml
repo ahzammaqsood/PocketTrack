@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="default_categories">
+        <item>Food</item>
+        <item>Transport</item>
+        <item>Bills</item>
+        <item>Groceries</item>
+        <item>Entertainment</item>
+        <item>Health</item>
+        <item>Shopping</item>
+        <item>Education</item>
+        <item>Salary</item>
+        <item>Freelance</item>
+        <item>Other</item>
+    </string-array>
+</resources>
