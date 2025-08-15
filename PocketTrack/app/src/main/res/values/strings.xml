@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PocketTrack</string>
+    <string name="income">Income</string>
+    <string name="expense">Expense</string>
+    <string name="add_transaction">Add Transaction</string>
+    <string name="edit_transaction">Edit Transaction</string>
+    <string name="delete">Delete</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="search">Search</string>
+    <string name="filter">Filter</string>
+    <string name="export_csv">Export CSV</string>
+    <string name="export_pdf">Export PDF</string>
+    <string name="theme_toggle">Theme</string>
+</resources>
