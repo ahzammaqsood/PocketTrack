@@ -3,15 +3,18 @@ package com.pockettrack.ui
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.lifecycle.lifecycleScope
 import com.pockettrack.databinding.ActivityMainBinding
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
-
 import com.google.android.gms.ads.LoadAdError
-import android.widget.Toast
 import com.pockettrack.R
 import com.pockettrack.ui.transactions.TransactionListFragment
+import com.pockettrack.util.ThemeManager
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -23,6 +26,12 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Apply saved theme on startup
+        lifecycleScope.launch {
+            val dark = ThemeManager.isDarkFlow(this@MainActivity).first()
+            AppCompatDelegate.setDefaultNightMode(if (dark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
+        }
 
         setSupportActionBar(binding.toolbar)
 
@@ -47,12 +56,12 @@ class MainActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
-                .replace(com.pockettrack.R.id.fragment_container, TransactionListFragment())
+                .replace(R.id.fragment_container, TransactionListFragment())
                 .commit()
         }
     }
 
     fun maybeShowInterstitial() {
-        interstitialAd?.show(this) ?: Toast.makeText(this, "Ad not ready", Toast.LENGTH_SHORT).show()
+        interstitialAd?.show(this)
     }
 }

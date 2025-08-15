@@ -1,8 +1,10 @@
 package com.pockettrack.ui.transactions
 
 import android.app.DatePickerDialog
+import android.net.Uri
 import android.os.Bundle
 import android.view.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.isVisible
@@ -47,6 +49,15 @@ class TransactionListFragment : Fragment() {
     private var currentQuery: String = ""
 
     private val repo by lazy { Repository(requireContext()) }
+
+    private val createCsv = registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
+        uri?.let { ExportUtils.writeCsv(requireContext(), it, filterForExport()) }
+        (activity as? com.pockettrack.ui.MainActivity)?.maybeShowInterstitial()
+    }
+    private val createPdf = registerForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri: Uri? ->
+        uri?.let { ExportUtils.writePdf(requireContext(), it, filterForExport()) }
+        (activity as? com.pockettrack.ui.MainActivity)?.maybeShowInterstitial()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -131,18 +142,12 @@ class TransactionListFragment : Fragment() {
 
     private fun doExportCsv() {
         val sdf = SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault())
-        registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
-            uri?.let { ExportUtils.writeCsv(requireContext(), it, filterForExport()) }
-            (activity as? com.pockettrack.ui.MainActivity)?.maybeShowInterstitial()
-        }.launch("pockettrack_${sdf.format(Date())}.csv")
+        createCsv.launch("pockettrack_${sdf.format(Date())}.csv")
     }
 
     private fun doExportPdf() {
         val sdf = SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault())
-        registerForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
-            uri?.let { ExportUtils.writePdf(requireContext(), it, filterForExport()) }
-            (activity as? com.pockettrack.ui.MainActivity)?.maybeShowInterstitial()
-        }.launch("pockettrack_${sdf.format(Date())}.pdf")
+        createPdf.launch("pockettrack_${sdf.format(Date())}.pdf")
     }
 
     private fun toggleTheme() {
