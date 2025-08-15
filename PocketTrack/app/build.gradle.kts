@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.kapt")
+    id("kotlin-parcelize")
 }
 
 android {
@@ -53,7 +54,7 @@ android {
 
 dependencies {
     // Kotlin and Core
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.0.0")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.2.0")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
@@ -75,9 +76,6 @@ dependencies {
 
     // CSV
     implementation("com.github.doyaaaaaken:kotlin-csv-jvm:1.9.3")
-
-    // PDF (Android PdfDocument)
-    // No external dep needed; will use android.graphics.pdf.PdfDocument
 
     // Ads
     implementation("com.google.android.gms:play-services-ads:24.5.0")
