@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
-                .replace(com.pockettrack.R.id.fragment_container, com.pockettrack.ui.transactions.TransactionListFragment())
+                .replace(com.pockettrack.R.id.fragment_container, TransactionListFragment())
                 .commit()
         }
     }
